@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+import rospy
+import numpy as np
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+import cv2
+from std_msgs.msg import String
+from pack.srv import sub_client, sub_clientRequest, sub_clientResponse
+from time import sleep
+
+class ImageSubscriber:
+
+    def __init__(self):
+
+        rospy.init_node('main', anonymous=True)
+        self.sub = rospy.Subscriber('webcam', Image, self.callback)
+        rospy.wait_for_service('distance')   
+        self.proxy=rospy.ServiceProxy('distance',sub_client)
+        self.pub=rospy.Publisher("drive-directives",String,queue_size=5)
+    
+
+        
+
+    def callback(self, data):
+        
+        print("getting response")
+        drive_command = String()
+        try:
+            final=self.proxy(sub_clientRequest(data))
+            print(final.theta.data)   
+            # if final.distance.data>150:
+                # drive_command.data="Forward"
+            if abs(57.32*(final.theta.data))>30:
+                if final.theta.data>0:
+                  drive_command.data="Left"
+                  print("left")
+                if final.theta.data<0:  
+                #if final.theta.data<0:
+                   drive_command.data="Right"
+                   print("right")
+                # elif final.distance.data<150:
+                #  drive_command.data="Stop"   
+            elif abs(57.32*(final.theta.data))<30:   
+            # elif final.distance.data!=0:
+               
+                # if final.distance.data<200:
+                #  drive_command.data="Stop"  
+               
+                drive_command.data="Forward" 
+                print("forward")
+            if final.distance.data< 100:
+                 drive_command.data="Blink"    
+            # elif final.distance.data<10:
+            #      drive_command.data="Stop"   
+            #      print("stop") 
+            # elif final.distance.theta<50:
+            #     drive_command.data="Stop"
+            print(drive_command)
+
+            self.pub.publish(drive_command)          
+                
+        except rospy.ServiceException as e:
+            rospy.loginfo("Service call failed: %s", e)
+       
+        # return final.result 
+        # server_client(self.a)
+       
+    
+    
+
+    
+if __name__ == '__main__':
+    # try:
+      
+        subscriber = ImageSubscriber()
+        rospy.spin()
+
+   
+    # server_client(a)
+    # rospy.Publisher("drive_directives",message,queue_size=10)
+    # # rospy.init_node('last_node',anonymous=True)
+    
